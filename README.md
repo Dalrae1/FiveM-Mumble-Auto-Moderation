@@ -49,7 +49,9 @@ docker run -v "%mypath:~0,-1%\Grumble Server:/data" -p 64738:64738 -p 64738:6473
 11) Install the python modules:
 
 > pip install pymumble
+> 
 > pip install vosk
+> 
 > pip install discord_webhook
 12) Follow [these](https://github.com/azlux/botamusique/wiki/Windows-dev-environment) instructions to download the Opus codec on your system
 13) Download the script from [here](https://github.com/Dalrae1/FiveM-Mumble-Auto-Moderation)
