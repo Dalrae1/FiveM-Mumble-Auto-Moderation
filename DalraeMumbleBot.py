@@ -71,9 +71,6 @@ def TranscribeSpeech(filename):
 	return resultString
 
 class MumbleBot:
-	"""
-	Forward audio from the main channel to a secondary channel but not vice versa
-	"""
 	def __init__(self):
 		self.cursor_time = 0.0
 		self.audioFiles = {}
