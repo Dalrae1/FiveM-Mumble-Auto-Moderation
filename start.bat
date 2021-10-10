@@ -1,2 +1,2 @@
-py bot.py --host localhost --user Dalrae --password WHAT --src Main --dst Main
+py DalraeMumbleBot.py --host localhost --user DalraeBot --password a --src Main --dst Main
 pause
