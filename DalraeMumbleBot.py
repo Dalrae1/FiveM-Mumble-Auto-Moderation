@@ -1,28 +1,16 @@
 import time
-from threading import Thread
 import os
 from vosk import Model, KaldiRecognizer
-import wave
 import json
-import types
+import re
 from discord_webhook import DiscordWebhook
-
-
-
-badText = ["fuck", "shit", "idiot"]
-discordWebhook = 'WEBHOOKURL'
-
-
-
-BUFFER = 0.1
-BITRATE = 24000
-RESOLUTION = 10 # in ms
-FLOAT_RESOLUTION = float(RESOLUTION) / 1000
-MONO_CHUNK_SIZE = BITRATE * 2 * RESOLUTION / 1000
-STEREO_CHUNK_SIZE = MONO_CHUNK_SIZE * 2 
-
 import pymumble_py3
 from pymumble_py3.constants import *
+import wave
+
+badText = ["nigger", "gringo", "faggot", "retard", "queer", "ass ", "barely legal", "cunt", "fag ", "lolita", "under aged", "nigga", "pedophile", "nazi", "swastika", "whore", "tranny", "ham mafia"]
+badDiscordWebhook = 'https://discord.com/api/webhooks/896657882236461056/u7G0u58hpPi5GJkhlqQOo2ugZ7He0GVyHJDrlbf3HMfmxmt25uX-oAU_x_3XSaLuaOMc' # This webhook will log any recording that includes anything in badText
+goodDiscordWebhook = 'https://discord.com/api/webhooks/896791628948332604/dL7_aIZhaaPcaMepxDPOgcUv8qKdCyAz99f4KzDPpKXI8hP0Q5U1gr1Moxov9-iJMzaZ' # This webhook will log all recordings
 
 def ConvertToMono(filename):
 	newFilename = filename[0:-4]+"-mono"+filename[-4:]
@@ -40,11 +28,19 @@ def IsSpeechBad(text):
 	else:
 		return False
 
-def LogToDiscord(username, badSpeech, clipFilename):
-	webhook = DiscordWebhook(url=discordWebhook, rate_limit_retry=True, content="Detected bad words: "+(', '.join(badSpeech)))
-	with open(clipFilename, "rb") as f:
-		webhook.add_file(file=f.read(), filename=username+'.mp3')
-	response = webhook.execute()
+def LogToDiscordBad(username, sentence, badSpeech, clipFilename):
+	if badDiscordWebhook != "":
+		webhook = DiscordWebhook(url=badDiscordWebhook, rate_limit_retry=True, content="\""+sentence+"\", Detected bad text: "+(', '.join(badSpeech)))
+		with open(clipFilename, "rb") as f:
+			webhook.add_file(file=f.read(), filename=username+'.mp3')
+		response = webhook.execute()
+
+def LogToDiscordGood(username, sentence, clipFilename):
+	if goodDiscordWebhook != "":
+		webhook = DiscordWebhook(url=goodDiscordWebhook, rate_limit_retry=True, content="\""+sentence+"\"")
+		with open(clipFilename, "rb") as f:
+			webhook.add_file(file=f.read(), filename=username+'.mp3')
+		response = webhook.execute()
 
 def ResultToText(result):
 	jsonResult = json.loads(result)
@@ -53,7 +49,6 @@ def ResultToText(result):
 		if isinstance(jsonResult[i], str):
 			resultString = resultString+jsonResult[i]+". "
 	return resultString
-
 
 def TranscribeSpeech(filename):
 	wf = wave.open(filename, "rb")
@@ -72,95 +67,61 @@ def TranscribeSpeech(filename):
 
 class MumbleBot:
 	def __init__(self):
-		self.cursor_time = 0.0
-		self.audioFiles = {}
-		self.exit = False
-
-		self.users = dict()
-
-		self.mumble = pymumble_py3.Mumble("localhost", "Botrae",64738)
-		self.mumble.set_loop_rate(0.005)
-		self.mumble.set_application_string("Bot")
-		self.mumble.callbacks.add_callback(PYMUMBLE_CLBK_CONNECTED,self.connection_cb)
+		self.SpeakingUsers = {}
+		self.mumble = pymumble_py3.Mumble("localhost", "Botrae",64738,reconnect=True)
 		self.mumble.set_receive_sound(True)
 		self.mumble.start()
 		self.mumble.is_ready()
 		self.loop()
 
-	def connection_cb(self,*args):
-		print("CONNECTED TO MUMBLE SERVER")
-
-
 	def loop(self):
-		"""Master loop""" 
-		import os.path
-		import audioop
-
-		self.cursor_time=time.time()
 		while self.mumble.is_alive():
-			if self.cursor_time < time.time() - BUFFER:
-				
-
+			try:
 				for user in self.mumble.users.values():
-					base_sound = None
 					userID = user.get_property("session")
 					userName = user.get_property("name")
-					if user.sound.is_sound():
-						if userID not in self.audioFiles:
-							audio_file_name = os.path.join(os.getcwd(), "%s %s" % (userName, time.strftime("%Y%m%d-%H%M%S")))
-							self.audioFiles[userID] = AudioFile(audio_file_name)
-						sound = user.sound.get_sound(FLOAT_RESOLUTION)
-						
-						if base_sound == None:
-							base_sound = sound.pcm
-						else:
-							base_sound = audioop.add(base_sound, sound.pcm, 2)
+					if user.sound.is_sound(): # User is currently speaking
+						if userID not in self.SpeakingUsers:
+							audioFilename = os.path.join(os.getcwd(), "%s %s" % (userName, time.strftime("%m %d %Y - %I %M %S %p")))
+							self.SpeakingUsers[userID] = {}
+							self.SpeakingUsers[userID]["StartTime"] = time.time()
+							self.SpeakingUsers[userID]["SoundFile"] = WaveFile(audioFilename)
+
+						sound = user.sound.get_sound()
+						self.SpeakingUsers[userID]["SoundFile"].write(sound.pcm)
+						self.SpeakingUsers[userID]["LastSound"] = sound.time
 					else:
-						if userID in self.audioFiles: # Was just talking
-							self.audioFiles[userID].close()
-							filename = self.audioFiles[userID].name
-							whatWasSaid = TranscribeSpeech(ConvertToMono(filename))
-							badText = IsSpeechBad(whatWasSaid)
-							if badText:
-								LogToDiscord(userName, badText, filename)
-							del self.audioFiles[userID]
-							os.remove(filename)
-							
+						if userID in self.SpeakingUsers:
+							if time.time()-self.SpeakingUsers[userID]["LastSound"] > 1.0: #Hasn't recieved a sound data in 1s
+								self.SpeakingUsers[userID]["SoundFile"].close()
+								filename = self.SpeakingUsers[userID]["SoundFile"].name
+								newFilename = ConvertToMono(filename)
+								whatWasSaid = TranscribeSpeech(newFilename)
+								if re.search("[a-zA-Z]", whatWasSaid):
+									badText = IsSpeechBad(whatWasSaid)
+									if badText:
+										LogToDiscordBad(userName, whatWasSaid, badText, filename)
+									else:
+										LogToDiscordGood(userName, whatWasSaid, filename)
+								else:
+									os.remove(newFilename)
+								os.remove(filename)
+								del self.SpeakingUsers[userID]
+			except RuntimeError:
+				pass
 
-					if base_sound:
-						self.audioFiles[userID].write(base_sound)
-
-				self.cursor_time += FLOAT_RESOLUTION
-			else:
-				time.sleep(FLOAT_RESOLUTION)
-
-
-
-class AudioFile():
-	"""
-	Manage the audio saving, through a pipe or in a WAV file
-	"""
+class WaveFile():
 	def __init__(self, name):
-		from subprocess import Popen, PIPE
-		import sys
-		
 		self.name = name
-		self.type = None
 		self.file_obj = None
-		
 		self.name += ".wav"
 		self.file_obj = wave.open(self.name, "wb")
-		self.file_obj.setparams((2, 2, BITRATE, 0, 'NONE', 'not compressed'))
-		self.type = "wav"
-		
+		self.file_obj.setparams((2, 2, 24000, 0, 'NONE', 'not compressed'))
+
 	def write(self, data):
-		if self.type == "pipe":
-			self.file_obj.write(data)
-		else:
-			self.file_obj.writeframes(data)
-	
+		self.file_obj.writeframes(data)
+
 	def close(self):
 		self.file_obj.close()
 
-if __name__ == "__main__":
-	recbot = MumbleBot()
+MumbleBot()
