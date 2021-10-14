@@ -8,9 +8,9 @@ import pymumble_py3
 from pymumble_py3.constants import *
 import wave
 
-badText = ["nigger", "gringo", "faggot", "retard", "queer", "ass ", "barely legal", "cunt", "fag ", "lolita", "under aged", "nigga", "pedophile", "nazi", "swastika", "whore", "tranny", "ham mafia"]
-badDiscordWebhook = 'https://discord.com/api/webhooks/896657882236461056/u7G0u58hpPi5GJkhlqQOo2ugZ7He0GVyHJDrlbf3HMfmxmt25uX-oAU_x_3XSaLuaOMc' # This webhook will log any recording that includes anything in badText
-goodDiscordWebhook = 'https://discord.com/api/webhooks/896791628948332604/dL7_aIZhaaPcaMepxDPOgcUv8qKdCyAz99f4KzDPpKXI8hP0Q5U1gr1Moxov9-iJMzaZ' # This webhook will log all recordings
+badText = ["fuck", "shit", "idiot"]
+badDiscordWebhook = '' # This webhook will log any recording that includes anything in badText
+goodDiscordWebhook = '' # This webhook will log all recordings
 
 def ConvertToMono(filename):
 	newFilename = filename[0:-4]+"-mono"+filename[-4:]
