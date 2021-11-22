@@ -1,4 +1,5 @@
-import time, os, json, re, wave, struct, math, random
+import time, os, json, re, wave
+from pathlib import Path
 from vosk import Model, KaldiRecognizer, SetLogLevel
 from discord_webhook import DiscordWebhook
 from dependancies import pymumble_py3
@@ -17,10 +18,10 @@ port = 30120
 
 
 # This webhook will log any recording that includes anything in badText. Replace with False to disable webhook.
-badDiscordWebhook = "https://discord.com/api/webhooks/898037470061527091/bBvnUJ49YiwQsbCRa2vEkDhqGYNF9_98tkUwTldzUvtUvpVBAXT6HlTVF-muIzPjl6bU"
+badDiscordWebhook = ""
 
 # This webhook will log all recordings. Replace with False to disable webhook.
-goodDiscordWebhook = "https://discord.com/api/webhooks/898037356832112640/wemzZxr20GwfEIjP-n6m6ZM6g-xQT_d9Dwhq1WrWt-U1imgtQQeUl1hC0VnzVVcNzvOv"
+goodDiscordWebhook = ""
 
 # Local path to save audio. Replace with False to disable saving locally.
 localAudioPath = "recordings/" 
@@ -66,13 +67,6 @@ def ConvertToMono(filename):
 	outwav.writeframes(ch_data.tobytes())
 	outwav.close()
 	return filename
-
-
-
-def ConvertToMonoOld(filename):
-	newFilename = filename[0:-4]+"-mono"+filename[-4:]
-	os.system("ffmpeg.exe -hide_banner -loglevel error -y -i \""+filename+"\" -ac 1 \""+newFilename+"\"")
-	return newFilename
 
 def IsSpeechBad(text):
 	badTextsDetected = []
@@ -170,6 +164,8 @@ class MumbleBot:
 				for user in self.mumble.users.values():
 					userID = user.get_property("session")
 					userName = user.get_property("name")
+					if localAudioPath:
+						Path(localAudioPath).mkdir(exist_ok=True)
 					audioFilename = "%s %s" % (userName, time.strftime("%m %d %Y - %I %M %S %p"))
 					audioFilename = "".join(x for x in audioFilename if x.isalnum()) #Sterilize filename
 					if localAudioPath:
