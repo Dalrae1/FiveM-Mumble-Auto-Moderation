@@ -139,11 +139,17 @@ class MumbleBot:
 
 	def channelCreated(self, channel):
 		self.mumble.users.myself.add_listening_channels([channel["channel_id"]])
+	def connected(self):
+		print("Connected to "+host+":"+str(port))
+	def disconnected(self):
+		print("Disconnected from "+host+":"+str(port))
 
 	def __init__(self):
 		self.SpeakingUsers = {}
-		
+		print("Attempting connection to "+host+":"+str(port)+"....")
 		self.mumble = pymumble_py3.Mumble(host, "Bot",port=port,reconnect=True, debug=False)
+		self.mumble.callbacks.set_callback(pymumble_py3.constants.PYMUMBLE_CLBK_CONNECTED, self.connected)
+		self.mumble.callbacks.set_callback(pymumble_py3.constants.PYMUMBLE_CLBK_DISCONNECTED, self.disconnected)
 		self.mumble.set_receive_sound(True)
 		self.mumble.start()
 		self.mumble.is_ready()
