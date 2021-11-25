@@ -130,7 +130,6 @@ def ProcessAudio(userName, userID, filename):
 		else:
 			LogToDiscordGood(userName, whatWasSaid, filename)
 	if not localAudioPath:
-		self.SpeakingUsers[userID]["SoundFile"].close()
 		os.remove(filename)
 
 
