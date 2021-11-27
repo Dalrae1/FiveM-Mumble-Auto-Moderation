@@ -20,7 +20,7 @@ for /f "delims=" %%V in ('where py') do @set pythonpath=%%V
 for /f "delims=" %%V in ('%pythonpath% --version') do @set pythonversion=%%V 
 echo Using %pythonversion% at %pythonpath%
 
-%pythonpath% "bot.py"
+%pythonpath% "DalraeMumbleBot.py"
 
 echo Process Terminated.
 pause
