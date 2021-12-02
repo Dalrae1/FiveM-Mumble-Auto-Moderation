@@ -1,4 +1,4 @@
-import time, os, json, re, wave
+import time, os, json, re, wave, socket, json
 from pathlib import Path
 from vosk import Model, KaldiRecognizer, SetLogLevel
 from discord_webhook import DiscordWebhook
@@ -16,6 +16,8 @@ host = "127.0.0.1"
 #Mumble port to connect to
 port = 30120
 
+#This is your RCON Password for your FiveM server. Set to False to disable.
+RconPassword = "Dalrae"
 
 # This webhook will log any recording that includes anything in badText. Replace with False to disable webhook.
 badDiscordWebhook = ""
@@ -93,6 +95,13 @@ def LogToDiscordGood(username, sentence, clipFilename):
 			webhook.add_file(file=f.read(), filename=username+'.mp3')
 		response = webhook.execute()
 
+def SendRcon(message):
+	if RconPassword:
+		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		sock.connect((host, port))
+		sock.send(b"\xFF\xFF\xFF\xFF"+bytes(("rcon {0} Dalrae:MumbleBotRecieve {1}").format(RconPassword, json.dumps(message)), encoding="ascii"))
+		sock.close()
+
 def ResultToText(result):
 	jsonResult = json.loads(result)
 	resultString = ""
@@ -125,6 +134,7 @@ def ProcessAudio(userName, userID, filename):
 	print(userName+": \""+whatWasSaid+"\"")
 	if re.search("[a-zA-Z]", whatWasSaid):
 		badText = IsSpeechBad(whatWasSaid)
+		SendRcon({"Username": userName, "Message": whatWasSaid})
 		if badText:
 			LogToDiscordBad(userName, whatWasSaid, badText, filename)
 		else:
