@@ -16,7 +16,7 @@ goto :EOF
 for /f "delims=" %%V in ('where py') do @set pythonpath=%%V
 echo Found Python at %pythonpath%
 %pythonpath% -m pip install vosk
-%pythonpath% -m pip install protobuf
+%pythonpath% -m pip install protobuf==3.20.0
 %pythonpath% -m pip install discord_webhook
 %pythonpath% -m pip install opuslib
 %pythonpath% -m pip install numpy
